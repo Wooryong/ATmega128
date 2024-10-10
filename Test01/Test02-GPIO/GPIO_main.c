@@ -11,15 +11,18 @@
 # define __DELAY_BACKWARD_COMPATIBLE__ // delay 함수의 인수로 변수 사용가능 (#include <util/delay.h> 위에 선언)
 #include <util/delay.h> //delay를 실행하기 위한 헤더파일
 // #include <avr/sfr_defs.h>
+#include <avr/interrupt.h>
 
 // 
 # define LED1	PORTG1 // LED - PG1 / PORTG1 = 1 / ( 1 << 1 )
-# define SW2	PORTG2 // SW2 - PG2 / PORTG2 = 2 / ( 1 << 2 )
-# define SW3	PORTG3 // SW3 - PG3 / PORTG3 = 3 / ( 1 << 3 )
+# define SW2	PORTD0 // SW2 - PD0 / PORTD0 = 0 / ( 1 << 0 )
+# define SW3	PORTD1 // SW3 - PD1 / PORTD1 = 1 / ( 1 << 1 )
 
 # define SW		PORTG4 // SW - PG4 / PORTG4 = 4 / ( 1 << 4 )
 
 // Port 선언은 main 함수 위에 
+
+// 외부 인터럽트 Pin : PD0 (INT0), PD1 (INT1)
 
 // SW ON = '0' & SW OFF = '1'	
 // #define _BV(bit) (1 << (bit))
@@ -47,13 +50,30 @@ void StandBy() // PG4 Pin을 프로그램의 시작 스위치로 연결
 	// while( (PING & 0x10 ) == 1 )
 }
 
+ 	volatile int ival = 1000; // 초기 Delay 1000 ms 설정 
+	// 
+
+ISR(INT0_vect) // 점점 느리게
+{
+	ival += 100;
+}
+
+ISR(INT1_vect) // 점점 빠르게
+{
+	ival -= 100;
+	if(ival < 100)
+		ival = 100;
+}
+
 int main(void)
 {
- 	int ival = 1000; // 초기 Delay 1000 ms 설정 
 	
-	DDRG &= ~(0x0C); // XXXX_00XX
+	DDRD &= ~(0x03); // XXXX_XX00	
+	PORTD |= 0x03;
+		
+	// DDRG &= ~(0x0C); // XXXX_00XX
 	// PG3, PG2 입력 설정
-	PORTG |= 0x0C; // XXXX_11XX / 내부 Pull-up 저항
+	// PORTG |= 0x0C; // XXXX_11XX / 내부 Pull-up 저항
 			
 	DDRG |= 0x03; // XXXX_XX11
 	// PG1 PG0 출력 설정
@@ -64,19 +84,31 @@ int main(void)
 	
 	PORTG &= ~( _BV(LED1) ); 
 	// PORTG &= ~(0x02);
+	
+	// Mask Register : EIMSK
+	EIMSK |= 0x03; // INT1, INT0
+	// XXXX_XX11
+	
+	// Create Register : EICRA
+	EICRA |= 0x0A; // XXXX_1010
+	// ISC01 = 1, ISC00 = 0
+	// ISC11 = 1, ISC10 = 0
+	// SW OFF > ON == H > L (하강엣지)
+	
+	sei();
 			
     while (1) 
     {
-		if ( (PING & _BV(SW2) ) == 0 ) // SW2 (PG1) ON
-		// if ( (PING & 0x02 ) == 0 )
-			ival += 500; // Slower
-				
-		else if ( (PING & _BV(SW3) ) == 0 )	// SW3 (PG2) ON	
-		// else if ( (PING & 0x04 ) == 0 )
-			ival -= 500; // Faster
-			
-		if(ival < 10)
-			ival = 100;	
+//		if ( (PING & _BV(SW2) ) == 0 ) // SW2 (PG1) ON
+//		// if ( (PING & 0x02 ) == 0 )
+//			ival += 500; // Slower
+//				
+//		else if ( (PING & _BV(SW3) ) == 0 )	// SW3 (PG2) ON	
+//		// else if ( (PING & 0x04 ) == 0 )
+//			ival -= 500; // Faster
+//			
+//		if(ival < 10)
+//			ival = 100;	
 					
 		PORTG |= _BV(LED1); // LED ON
 		_delay_ms(ival); // ms 단위의 지연시간 설정
