@@ -9,6 +9,10 @@ Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "Test02-GPIO", "Test02-GPIO\
 EndProject
 Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "Test03-Timer0", "Test03-Timer0\Test03-Timer0.cproj", "{F156DB50-13C1-4FA0-A606-CBE3EF0100C9}"
 EndProject
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "Test04-Timer16", "Test04-Timer16\Test04-Timer16.cproj", "{1BA2CD5E-ABC5-4AF2-AA56-3416E7DD72F0}"
+EndProject
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "Test05-FND", "Test05-FND\Test05-FND.cproj", "{67D4B44D-A081-454C-AC1C-D3FDA958EB33}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|AVR = Debug|AVR
@@ -27,6 +31,14 @@ Global
 		{F156DB50-13C1-4FA0-A606-CBE3EF0100C9}.Debug|AVR.Build.0 = Debug|AVR
 		{F156DB50-13C1-4FA0-A606-CBE3EF0100C9}.Release|AVR.ActiveCfg = Release|AVR
 		{F156DB50-13C1-4FA0-A606-CBE3EF0100C9}.Release|AVR.Build.0 = Release|AVR
+		{1BA2CD5E-ABC5-4AF2-AA56-3416E7DD72F0}.Debug|AVR.ActiveCfg = Debug|AVR
+		{1BA2CD5E-ABC5-4AF2-AA56-3416E7DD72F0}.Debug|AVR.Build.0 = Debug|AVR
+		{1BA2CD5E-ABC5-4AF2-AA56-3416E7DD72F0}.Release|AVR.ActiveCfg = Release|AVR
+		{1BA2CD5E-ABC5-4AF2-AA56-3416E7DD72F0}.Release|AVR.Build.0 = Release|AVR
+		{67D4B44D-A081-454C-AC1C-D3FDA958EB33}.Debug|AVR.ActiveCfg = Debug|AVR
+		{67D4B44D-A081-454C-AC1C-D3FDA958EB33}.Debug|AVR.Build.0 = Debug|AVR
+		{67D4B44D-A081-454C-AC1C-D3FDA958EB33}.Release|AVR.ActiveCfg = Release|AVR
+		{67D4B44D-A081-454C-AC1C-D3FDA958EB33}.Release|AVR.Build.0 = Release|AVR
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
