@@ -133,9 +133,8 @@ ISR(INT1_vect) // SW3(PD1) - 점점 빠르게
 int main(void)
 {
 	// 외부 인터럽트 Pin : (PD0 PD1 PD2 PD3) (PE4 PE5 PE6 PE7)
-//	DDRD &= ~(0x03); // PD0, PD1 입력 (SW)
-//	PORTD |= 0x03; // PD0, PD1 내부 Pull-up 저항 사용
-
+	DDRD &= ~(0x03); // PD0, PD1 입력 (SW)
+	PORTD |= 0x03; // PD0, PD1 내부 Pull-up 저항 사용
 
 	// StandBy 함수 실행 		
 	// DDR |= _BV( LED0 | LED1 | LED2 );
