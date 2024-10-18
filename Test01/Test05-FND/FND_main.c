@@ -5,7 +5,7 @@
  * Author : user
  */ 
 
-// *** 전처리 ***
+// *** 전처리 *** //
 #define F_CPU 16000000L // 16 MHz CLK (설정 안할 시 1 MHz로 동작)
 #include <avr/io.h> // AVR 기본 헤더파일
 #define __DELAY_BACKWARD_COMPATIBLE__ // delay 함수의 인수로 변수 사용가능 (#include <util/delay.h> 위에 선언)
@@ -20,13 +20,14 @@
 #define CPORT	PORTB // Control Port : Port B
 #define IPORT	PORTA // Image Port : Port A
 
-
 #define LED0	PORTG0 // PORTG0 = 0 / ( 1 << 0 )
 #define LED1	PORTG1 // PORTG1 = 1 / ( 1 << 1 )
 #define LED2	PORTG2 // PORTG2 = 2 / ( 1 << 2 )
 
 #define SW2		PORTD0 // PORTD0 = 0 / ( 1 << 0 )
 #define SW3		PORTD1 // PORTD1 = 1 / ( 1 << 1 )
+// *** 전처리 *** //
+
 
 //unsigned char img[] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x27, 0x7F, 0x67};
 unsigned char img[] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x27, 0x7F, 0x67, 0x00}; // img[10] for Null	
@@ -37,213 +38,340 @@ unsigned char img[] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x27, 0x7F, 0x6
 //unsigned char img[] = {0xC0, 0xF9, 0xA4, 0xB0, 0x99, 0x92, 0x82, 0xD8, 0x80, 0x90, 0x88, 0x83, 0xC6, 0xA1, 0x86, 0x8E}; // 0 ~ F
 
 
+volatile int opt_mode, watch_mode, timer_mode = 0; 
+// [opt_mode] 0 : Watch 모드, 1 : Timer 모드
+// [watch_mode] 0 : Default / 1 : Time Setting (Initial Minute) / 2 : Time Setting End (Initial Minute) / 3 : Watch Operation Start
+// [timer_mode] 0 : Default / 1 : Time Setting (Target Second) / 2 : Time Setting End (Target Second) / 3 : Timer Operation Start
+
 //
-
-volatile int mode = 0; // 0 : Ready, 1 : Up-Count, 2 : 정지, 3(0)
-
-volatile char data[5] = {1, 2, 3, 4}; // 초기화
-int digit(int num) // num 변수를 1000, 100, 10, 1 자릿수 추출하여 data[] 배열에 저장
+volatile int data[5] = {1, 2, 3, 4}; // 초기화
+int digit(int num) // num 변수로부터 1000, 100, 10, 1 자릿수 추출하여 data[] 배열에 저장
 {
-	// if, 4자리 수 이상의 숫자가 입력되면?? ex) 50,001 
-	// n4 = 50; > Indexing 오류 발생 
-	if( num > 9999 ) return 0; // 인수 유효성 Check (범위 초과 시 0을 반환)
-	
-	//
-	data[3] = num % 10; // 1의 자리 
-	data[2] = (num / 10) % 10; //  10의 자리 / 자동으로 int 형변환
-	data[1] = (num / 100) % 10; // 100의 자리
-	data[0] = (num / 1000); // 1000의 자리	
-	// data[5] = {1000의 자리, 100의 자리, 10의 자리, 1의 자리}
-	
-	//
+	if( num > 9999 ) return 0; // 인수 유효성 Check (범위 초과 시 0을 반환)	
+	// 최대 표현 범위 99:99
+	data[3] = num % 10; // Digit_1 (10 ms)
+	data[2] = (num / 10) % 10; // Digit_10 (100 ms)
+	data[1] = (num / 100) % 10; // Digit_100 (1 s)
+	data[0] = (num / 1000); // Digit_1000 (10 s)
+	// 
 	// 상위 Digit 0 대신 Null 처리
-	//if ( num < 10 )
-	//{
-		//data[2] = 10;
-		//data[1] = 10;
-		//data[0] = 10;
-	//}
-	//else if ( num < 100 )
-	//{
-		//data[1] = 10;
-		//data[0] = 10;
-	//}
-	//else if ( num < 1000 )
-		//data[0] = 10;		
-	//
-	
-	return 1;	
-}
-//
-
-//
-
-volatile int count = 0; // int cnt = 0;
-volatile int num = 0;
-ISR(TIMER0_COMP_vect) // 1 ms 간격
-{	
-	if( mode == 0 ) 
+	/*	
+	if ( num < 10 )
 	{
-		count = 0; num = 0;
+		data[2] = 10; data[1] = 10; data[0] = 10;
 	}
-	else if( mode == 1 )
+	else if ( num < 100 )
 	{
-		count++;
-	
-		if (count == 10) // 10 ms 간격
-		{
-			count = 0; num++;	
-			if (num > 9999) num = 0;	
-		}
-	
-		TCNT0 = 0; //  TCNT0 초기화
+		data[1] = 10; data[0] = 10;
 	}
+	else if ( num < 1000 )
+		data[0] = 10;
+	*/
+	// 상위 Digit 0 대신 Null 처리
 			
-}
-//
+	return 1;	
+} 
+// int digit(int num)
 
 //
-volatile int i = 0;
-//volatile int num = 0;
-ISR(TIMER2_OVF_vect) // FND Refresh // 4 ms 간격
+volatile int time_data[5] = {1, 2, 3, 4}; // 초기화
+int time_digit (int time_num) // time_num 변수로부터 10분, 1분, 10초, 1초 자릿수 추출하여 time_data[] 배열에 저장
 {
+	if( time_num > 5999 ) return 0; // 인수 유효성 Check (범위 초과 시 0을 반환)		
+	// 최대 표현 범위 99:59 (99분 59초 이므로 5940(60분) + 59 = 5,999)
+	int sec = time_num % 60; // 00 ~ 59
+	int minute = time_num / 60;	// 00 ~ 99
 	//
-	//if ( i == 0 )
-	//{
-		//digit(num);
-		//num++;
-		//if (num > 9999) num = 0;
-	//}
+	time_data[3] = sec % 10; // Digit_1 (1 s)
+	time_data[2] = sec / 10; // Digit_10 (10 s)
+	time_data[1] = minute % 10; // Digit_100 (1 min.)
+	time_data[0] = minute / 10;// Digit_1000 (10 min.)
+	//		
+	return 1;	
+} 
+// 
+
+
+// TIMER 2 OCM Interrupt ISR //
+volatile int i = 0;
+int dp = 1; // 두번째 자리 옆에 소수점 표시 
+ISR(TIMER2_COMP_vect) // Interrupt 발생 주기 : 4 ms 
+{
+	// FND Refresh //	
+	CPORT = _BV(i); 
 	//
-	digit(num);
-	CPORT = _BV(i); // 1 << i
-	// (PB0 - 1st Digit) > (PB1 - 2nd Digit) > (PB2 - 3rd Digit) > (PB3 - 4th Digit)
-	IPORT = ~( img[ data[ i ] ] + (i == 1) * 0x80 );
-	// data[4] = {1000의 자리, 100의 자리, 10의 자리, 1의 자리}
+	if ( opt_mode == 0 )
+	{
+		if ( watch_mode == 0 )
+			IPORT = ~( img[ 0 ] );
+		else // (mode != 0)
+		{
+			if( i == dp )
+				IPORT = ~( ( img[ time_data[ i ] ] ) | (0x80) ); // 두번째 자리에 소수점 표시
+			else
+				IPORT = ~( img[ time_data[ i ] ] );	
+		}
+	}
+	//
+	if( opt_mode == 1 )
+	{
+		if ( timer_mode == 0 ) 
+			IPORT = ~( img[ 0 ] );
+		else // (mode != 0)
+		{
+			if( i == dp ) 	
+				IPORT = ~( ( img[ data[ i ] ] ) | (0x80) ); // 두번째 자리에 소수점 표시
+			else
+				IPORT = ~( img[ data[ i ] ] );	
+		}
+	}	
+	//
 	i++;
 	if (i == 4) i = 0;
-	//			
-}
-//
+	//		
+	TCNT2 = 0; //		
+} // ISR(TIMER2_COMP_vect) 
+// TIMER 2 OCM Interrupt ISR //
 
-//
-ISR(INT0_vect) // SW2(PD0) - 점점 느리게
+
+// TIMER 0 OCM Interrupt ISR //
+volatile int tick, Stick = 0; //
+ISR(TIMER0_COMP_vect) // Interrupt 발생 주기 : 10 ms (정확히는 9.984 ms)
 {
-	mode++;
-	if (mode == 3) mode = 0;
-	// mode 1 : START, mode 2 : STOP, mode 3(0) : Reset
+	if ( timer_mode == 3 )
+	{
+		if (tick < Stick) tick++;		
+		if( tick > 9999 ) tick = 0;
+	}
+	TCNT0 = 0; // TCNT0 초기화
+} // ISR(TIMER0_COMP_vect)
+// TIMER 0 OCM Interrupt ISR //
+
+
+// TIMER 1 OCMA Interrupt ISR //
+volatile int time_tick, time_Stick = 0;
+ISR(TIMER1_COMPA_vect) // Interrupt 발생 주기 : 1 s 
+{
+	if ( watch_mode == 3 ) 
+	{
+		time_tick++;		
+		if( time_tick > 5999 ) time_tick = 0; // (표현가능 범위 초과 시 0으로)
+	}
+			
+	TCNT1 = 0; // TCNT1 초기화
+} // ISR(TIMER1_COMPA_vect)
+// TIMER 1 OCM Interrupt ISR //
+
+
+// External Interrupt ISR //
+ISR(INT0_vect) // BUT1 (PD0) 
+{
+	if ( opt_mode == 0 ) // Watch
+	{	
+		if (watch_mode < 3) watch_mode++;
+		if ( watch_mode == 2 ) time_Stick = time_tick;
+	}
+	//	
+	if ( opt_mode == 1 ) // Timer
+	{
+		if( timer_mode == 0 ) timer_mode = 1;
+		else if( timer_mode == 1 ) 
+		{
+			timer_mode = 2;
+			Stick = tick; tick = 0;
+		}										
+	}
+	/*
+	switch( ++timer_mode )
+	{
+		case 0 : 
+		{			
+			break;
+		}
+		case 1 : // Start Up-count
+		{
+			tick = 0;
+			break;		
+		}
+		case 2 : // Stop
+		{
+			Stick = tick;
+			break;
+		}
+		default : // mode > 2
+		{
+			timer_mode = 0; tick = 0; Stick = 0;
+			break;
+		}
+	}
+	*/
+	//		
 }
-//
+// External Interrupt ISR //
+
+
+// External Interrupt ISR //
+// volatile int target_minute_watch = 0;
+// volatile int target_second_timer = 0;
+ISR(INT1_vect) // BUT2 (PD1)
+{
+	//
+	if ( watch_mode == 1 )
+	{
+		time_tick = time_tick + 60; // 1분(60초)씩 증가		
+		if (time_tick > 5940) time_tick = 0; // 표현 가능한 최대 분 범위 99분 이후 00분
+	}
+	//
+	if ( watch_mode == 3 )
+	{
+		watch_mode = 0; time_tick = 0; time_Stick = 0;
+	}
+	//	
+	if ( timer_mode == 1 )
+	{
+		tick = tick + 100; // 1초(1000 ms)씩 증가			
+		if (tick > 9999) tick = 0; // 표현 가능한 범위 99.99초
+	}
+	//
+	if ( timer_mode == 2 ) timer_mode = 3;				
+	//
+	if ( (timer_mode == 3) && (tick == Stick) ) // Timer Reset
+	{
+		timer_mode = 0; tick = 0; Stick = 0;	
+	}
+	//
+} 
+// External Interrupt ISR //
+
+
+// External Interrupt ISR //
+ISR(INT2_vect) // BUT3 (PD1)
+{
+	opt_mode++;	
+	if (opt_mode > 1) opt_mode = 0; // 0 : 시계 모드, 1 : Timer 모드
+	
+	watch_mode = 0; timer_mode = 0;	
+	time_tick = 0; time_Stick = 0;
+	tick = 0; Stick = 0;
+}
+// External Interrupt ISR //
+
 	
 int main(void)
 {	
-	DDRD &= ~(0x03); // PD0, PD1 입력 (SW)
-	PORTD |= 0x03; // PD0, PD1 내부 Pull-up 저항 사용
+	// *** GPIO Setting *** //
+	DDRD &= ~(0x07); // PD0, PD1, PD2 입력 (SW)
+	PORTD |= 0x07; // PD0, PD1, PD2 내부 Pull-up 저항 사용
 	
-	DDRG &= ~(0x10);
-	  
+	DDRG &= ~(0x10); // PG4 입력 (SW)
+	
+	DDRG |= 0x01; // PG0 출력 (LED)
+	PORTG &= ~(0x01); // Initially, PG0 LED OFF
+		  
 	CDDR |= 0x0F; // 출력 : PB0 PB1 PB2 PB3
 	IDDR = 0xFF; // 출력
-	
+	// *** GPIO Setting *** //	
+	//	
     CPORT = 0x0F; // 모든 세그먼트 선택 ('1' : Digit ON, '0' : OFF)
 	IPORT = ~(0x3F); // 0 모두 표시 
-	// IPORT = ~img[ 0 ];
+	// IPORT = ~(0xFF);
 
  	// PG4 SW ON
  	// StandBy();
-		
-	// TIMER0 : 100 ms Scale Stop-watch 용도
-	TIMSK |= _BV(OCIE0); // TIMER0 Output Compare Match Interrupt 활성화
-	//TIMSK |= 0x02;
-			
-	// TIMER0 분주비 설정
-	TCCR0 |= 0x04; 
-	//TCCR0 |= 0x07;
-	// TCCR0 [2:0] = '111' // 분주비 1024 > 주기 64 us > Overflow 발생주기 16.384 ms
-	// TCCR0 [2:0] = '110' // 분주비 256 > 주기 16 us > Overflow 발생주기 4.096 ms
-	// TCCR0 [2:0] = '100' // 분주비 64 > 주기 4 us > Overflow 발생주기 1.024 ms
-	
-	OCR0 = 250; // (0 ~ 156) 
-	// TCCR0 [2:0] = '111' // 분주비 1024 > 주기 64 us > Overflow 발생주기 16.384 ms	
-	// if OCR0 = 156, OCI 발생주기 : 16.384 ms * (156 / 256) = 9.984 ms
-	// 7번 OCI 발생 시, 14.272 ms * 7 = 99.904 ms
-	// TCCR0 [2:0] = '110' // 분주비 256 > 주기 16 us > Overflow 발생주기 4.096 ms
-	// if OCR0 = 250, OCI 발생주기 : 4.096 ms * (250 / 256) = 4 ms
-	// TCCR0 [2:0] = '100' // 분주비 64 > 주기 4 us > Overflow 발생주기 1.024 ms
-	// if OCR0 = 250, OCI 발생주기 : 1.024 ms * (250 / 256) = 1 ms
-
-	
-	// TIMER2 : FND Refresh
-	TIMSK |= _BV(TOIE2); // TIMER2 Overflow Interrupt 활성화  
-	//TIMSK |= 0x40;
-	
-	// TIMER2 분주비 설정 (TIMER0와 다르므로 데이터시트 참고)
-	TCCR2 |= 0x04; 
-	// TCCR2 [2:0] = '011' // 분주비 64 > 주기 4 us > Overflow 발생주기 1.024 ms
-	// TCCR2 [2:0] = '100' // 분주비 256 > 주기 16 us > Overflow 발생주기 4.096 ms
-	// TCCR2 [2:0] = '101' // 분주비 1024 > 주기 64 us > Overflow 발생주기 16.384 ms
-	
-				
-	// Mask Register : EIMSK
-	EIMSK |= 0x03; // INT1, INT0
-	// EIMSK = 0x03; ==> EIMSK = 0000_0011
-		
-	// Create Register : EICRA
-	EICRA = ( EICRA & (0xF0) ) | (0x0A); // 해당범위 먼저 0으로 만들고 1 덮어씌우기	
-	// SW OFF > ON == H > L (하강엣지) / SW ON > OFF == L > H (상승엣지)
-	// ISC11 = 1, ISC10 = 0 >> INT1 하강엣지 / ISC11 = 1, ISC10 = 1 >> INT1 상승엣지
-	// ISC01 = 1, ISC00 = 0 >> INT0 하강엣지 / ISC01 = 1, ISC00 = 1 >> INT0 상승엣지
-	// '10' - 하강엣지, '11' - 상승엣지	
-	
-	// 전역 인터럽트 활성화
-	sei();	
-		
 	//
-	// 교수님 코드 (0000 ~ 9999 사이 임의의 숫자 7-Segment에 출력)
-	//num = 0; // int num = 1234;
-	//digit(num); // digit 함수 실행 > num의 자릿수 추출하여 배열에 저장
+	
+	
+	// *** Interrupt Setting *** // 	
+	// TIMER 0 OCM Interrupt : 10 ms Unit Time Update 
+	TIMSK |= _BV(OCIE0); // TIMER0 Output Compare Match Interrupt 활성화	
+	TCCR0 |= 0x07; // TIMER 0 분주비 1024 > Overflow 발생주기 16.384 ms	
+	OCR0 = 156; // OCM 발생주기 : 16.384 ms * (156 / 256) = 9.984 ms	
+	
+		
+	// TIMER 2 TOF Interrupt : FND Refresh
+	// TIMSK |= _BV(TOIE2); // TIMER2 Overflow Interrupt 활성화 
+	//
+	TIMSK |= _BV(OCIE2); 
+	OCR2 = 250; // OCM 발생주기 : 4.096 ms * (250 / 256) = 4 ms
+	//
+	TCCR2 |= 0x04; // TIMER 2 분주비	256 > Overflow 발생주기 4.096 ms
+	// (TIMER0와 다르므로 데이터시트 참고)
+	 
+	 
+	// TIMER 1 OCM Interrupt : 1 sec Unit Time Update
+	TIMSK |= _BV(OCIE1A); 
+	TCCR1B |= 0x04;
+	// TCCR1B [2:0] = '100' // 분주비 256 > Overflow 발생주기 1.048576 s
+	OCR1A = 62500; // OCM 발생주기 : (1.048576 s) * (62500 / 65536) = 1 s
+	//  
+		
+		 
+	// External Interrupt	
+	EIMSK |= 0x07; // External Interrupt 0, 1, 2 활성화	
+	EICRA |= 0x2A; // Falling Edge Active
 
-	num = 0;
-	digit(num);
+	// Global Interrupt Activation
+	sei();	
+	
+	// *** Interrupt Setting *** //		
+	//
+	digit(0);
  	// PG4 SW ON
  	StandBy();	
-			
+	//		
 	while(1)
-	{
-//		for( num = 0; num < 10000; num++)
-//		{
-//			digit(num);
-			//for( int i = 0 ; i < 4 ; i++ )
-			//{
-				//CPORT = _BV(i); // 1 << i
-				//// (PB0 - 1st Digit) > (PB1 - 2nd Digit) > (PB2 - 3rd Digit) > (PB3 - 4th Digit)
-				//IPORT = ~( img[ data[ i ] ] + (i == 1) * 0x80 );
-				//// data[3] = {1000의 자리, 100의 자리, 10의 자리, 1의 자리}
-				//_delay_ms(5);
-			//}
-			//_delay_ms(10); //
-//		}
+	{	
+		//			
+		if ( opt_mode == 0 ) // watch_mode
+		{
+			switch( watch_mode )
+			{
+				case 0 : // Ready
+				{
+					time_digit(0); break;					
+				}				
+				case 1 : // Time Setting Start (Initial Minute)
+				{
+					time_digit(time_tick); break;
+				}
+				case 2 : // Time Setting End (Initial Minute) 
+				{
+					time_digit(time_Stick); break;
+				}
+				case 3 : // Watch Start
+				{
+					time_digit(time_tick); break;
+				}							
+			} 
+		} // watch_mode						
+		else // opt_mode == 1 (timer_mode)
+		{
+			switch( timer_mode )
+			{
+				case 0 : // Ready
+				{
+					digit(0); 
+					PORTG &= ~(0x01); // PG0 LED OFF
+					break;		
+				}			
+				case 1 : // Time Setting Start (Target Second)
+				{
+					digit(tick); break;
+				}
+				case 2 : // Time Setting End (Target Second)
+				{
+					digit(Stick); break;
+				}
+				case 3 : // Timer Start
+				{
+					digit(tick); 
+					//
+					if ( tick >= Stick ) PORTG |= 0x01; // LED ON	
+					//
+					break;
+				}		
+			}
+		} // timer_mode
+	}
 
-		// TIMER0 Output Compare Match Interrupt
-		//digit(num);
-		//for( int i = 0 ; i < 4 ; i++ )
-		//{
-			//CPORT = _BV(i); // 1 << i
-			////IPORT = ~img[ data[ i ] ];
-			//IPORT = ~( img[ data[ i ] ] + (i == 1) * 0x80 );
-			//_delay_ms(5);
-		//}
-	
-		//switch( mode )
-		//{
-			//case 0 : // Ready
-			//
-			//case 1 : // Up-count
-			//
-			//case 2 : // Stop
-			//
-			//default : // 
-			//
-		//}
-				
 }

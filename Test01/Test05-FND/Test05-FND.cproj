@@ -125,9 +125,6 @@
     <Compile Include="FND_main.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="FND_main_my.c">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="MyLib.c">
       <SubType>compile</SubType>
     </Compile>
