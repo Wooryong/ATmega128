@@ -19,6 +19,8 @@ Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "Test06-PWM", "Test06-PWM\Te
 EndProject
 Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "Test06-PWM_My", "Test06-PWM_My\Test06-PWM_My.cproj", "{930F2166-D20A-436A-8032-B42C25B4CD11}"
 EndProject
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "Test07-UART", "Test07-UART\Test07-UART.cproj", "{F43CF295-D77A-4D21-A9F3-C2A01067DFAE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|AVR = Debug|AVR
@@ -57,6 +59,10 @@ Global
 		{930F2166-D20A-436A-8032-B42C25B4CD11}.Debug|AVR.Build.0 = Debug|AVR
 		{930F2166-D20A-436A-8032-B42C25B4CD11}.Release|AVR.ActiveCfg = Release|AVR
 		{930F2166-D20A-436A-8032-B42C25B4CD11}.Release|AVR.Build.0 = Release|AVR
+		{F43CF295-D77A-4D21-A9F3-C2A01067DFAE}.Debug|AVR.ActiveCfg = Debug|AVR
+		{F43CF295-D77A-4D21-A9F3-C2A01067DFAE}.Debug|AVR.Build.0 = Debug|AVR
+		{F43CF295-D77A-4D21-A9F3-C2A01067DFAE}.Release|AVR.ActiveCfg = Release|AVR
+		{F43CF295-D77A-4D21-A9F3-C2A01067DFAE}.Release|AVR.Build.0 = Release|AVR
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
